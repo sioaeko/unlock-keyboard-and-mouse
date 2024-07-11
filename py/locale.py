@@ -5,14 +5,17 @@
 # >>> TABLE OF CONTENTS:
 # ------------------------------------------------------------------------------
 # 1.0 Import modules
-# 2.0 Lower camel case
-# 3.0 Get list of files
-# 4.0 Add item
-# 5.0 Remove item
-# 6.0 Change key
-# 7.0 Decode
-# 8.0 Upgrade
-# 9.0 Initialization
+# 2.0 Utility functions
+#   2.1 Lower camel case
+#   2.2 Get list of files
+#   2.3 Safe JSON operations
+# 3.0 Localization operations
+#   3.1 Add item
+#   3.2 Remove item
+#   3.3 Change key
+#   3.4 Decode characters
+# 4.0 Upgrade function
+# 5.0 Main function
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
@@ -25,233 +28,205 @@ import os
 import pathlib
 import re
 import sys
-
+from typing import List, Dict, Any
 
 # ------------------------------------------------------------------------------
-# 2.0 LOWER CAMEL CASE
+# 2.0 UTILITY FUNCTIONS
 # ------------------------------------------------------------------------------
 
-def lowerCamelCase(string):
+# ------------------------------------------------------------------------------
+# 2.1 LOWER CAMEL CASE
+# ------------------------------------------------------------------------------
+
+def lowerCamelCase(string: str) -> str:
+    """
+    Convert a string to lower camel case.
+    
+    Args:
+        string (str): The input string to convert.
+    
+    Returns:
+        str: The string in lower camel case format.
+    """
     string = re.sub(r"(-|_)+", ' ', string).title()
-    string = re.sub(r"[^a-zA-Z0-9]", '', string)
-
-    return string[0].lower() + string[1:]
-
+    return ''.join(char.lower() if i == 0 else char for i, char in enumerate(string) if char.isalnum())
 
 # ------------------------------------------------------------------------------
-# 3.0 GET LIST OF FILES
+# 2.2 GET LIST OF FILES
 # ------------------------------------------------------------------------------
 
-def getListOfFiles(path):
-    allFiles = list()
-
-    for entry in os.listdir(path):
-        fullPath = os.path.join(path, entry)
-
-        if not os.path.isdir(fullPath):
-            allFiles.append(fullPath)
-
-    for entry in os.listdir(path):
-        fullPath = os.path.join(path, entry)
-
-        if os.path.isdir(fullPath):
-            allFiles = allFiles + getListOfFiles(fullPath)
-
+def getListOfFiles(path: str) -> List[str]:
+    """
+    Recursively get a list of all files in a directory.
+    
+    Args:
+        path (str): The directory path to search.
+    
+    Returns:
+        List[str]: A list of file paths.
+    """
+    allFiles = []
+    for root, _, files in os.walk(path):
+        allFiles.extend(os.path.join(root, file) for file in files)
     return allFiles
 
+# ------------------------------------------------------------------------------
+# 2.3 SAFE JSON OPERATIONS
+# ------------------------------------------------------------------------------
+
+def safeJsonLoad(file_path: str) -> Dict[str, Any]:
+    """
+    Safely load a JSON file, handling potential errors.
+    
+    Args:
+        file_path (str): The path to the JSON file.
+    
+    Returns:
+        Dict[str, Any]: The loaded JSON data, or an empty dict if there was an error.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            return json.load(file)
+    except json.JSONDecodeError:
+        print(f"Error decoding JSON in file: {file_path}")
+        return {}
+
+def safeJsonDump(data: Dict[str, Any], file_path: str) -> None:
+    """
+    Safely write data to a JSON file.
+    
+    Args:
+        data (Dict[str, Any]): The data to write.
+        file_path (str): The path to the JSON file.
+    """
+    with open(file_path, 'w', encoding='utf-8') as file:
+        json.dump(data, file, ensure_ascii=False, indent=4, sort_keys=True)
 
 # ------------------------------------------------------------------------------
-# 4.0 ADD ITEM
+# 3.0 LOCALIZATION OPERATIONS
 # ------------------------------------------------------------------------------
 
-def addItem(allFiles):
+# ------------------------------------------------------------------------------
+# 3.1 ADD ITEM
+# ------------------------------------------------------------------------------
+
+def addItem(allFiles: List[str]) -> None:
+    """
+    Add a new localization item to all language files.
+    
+    Args:
+        allFiles (List[str]): List of all localization file paths.
+    """
     message = input('Enter your message: ')
     camelized_message = lowerCamelCase(message)
 
-    for keyFile in allFiles:
-        with open(keyFile, 'r+') as json_file:
-            data = json.load(json_file)
-
-            if (camelized_message in data) == False:
-                data[camelized_message] = {'message': message}
-
-            json_file.seek(0)
-            json.dump(data, json_file, ensure_ascii=False, indent=4, sort_keys=True)
-            json_file.truncate()
-
+    for file_path in allFiles:
+        data = safeJsonLoad(file_path)
+        if camelized_message not in data:
+            data[camelized_message] = {'message': message}
+        safeJsonDump(data, file_path)
 
 # ------------------------------------------------------------------------------
-# 5.0 REMOVE ITEM
+# 3.2 REMOVE ITEM
 # ------------------------------------------------------------------------------
 
-def removeItem(allFiles):
+def removeItem(allFiles: List[str]) -> None:
+    """
+    Remove a localization item from all language files.
+    
+    Args:
+        allFiles (List[str]): List of all localization file paths.
+    """
     key = input('Enter your key (lowerCamelCase): ')
-
-    for keyFile in allFiles:
-        with open(keyFile, 'r+') as json_file:
-            data = json.load(json_file)
-
-            if data[key]:
-                del data[key]
-
-            json_file.seek(0)
-            json.dump(data, json_file, ensure_ascii=False, indent=4,
-                      sort_keys=True)
-            json_file.truncate()
-
+    for file_path in allFiles:
+        data = safeJsonLoad(file_path)
+        if key in data:
+            del data[key]
+            safeJsonDump(data, file_path)
 
 # ------------------------------------------------------------------------------
-# 6.0 CHANGE KEY
+# 3.3 CHANGE KEY
 # ------------------------------------------------------------------------------
 
-def changeKey(allFiles):
+def changeKey(allFiles: List[str]) -> None:
+    """
+    Change a key in all localization files.
+    
+    Args:
+        allFiles (List[str]): List of all localization file paths.
+    """
     old_key = input('Enter key: ')
     new_key = input('Enter new key: ')
-
-    for keyFile in allFiles:
-        with open(keyFile, 'r+') as file:
-            data = json.load(file)
-
-            if old_key in data:
-                data[new_key] = data[old_key]
-
-                del data[old_key]
-
-            file.seek(0)
-            json.dump(data, file, ensure_ascii=False, indent=4, sort_keys=True)
-            file.truncate()
-
+    for file_path in allFiles:
+        data = safeJsonLoad(file_path)
+        if old_key in data:
+            data[new_key] = data.pop(old_key)
+            safeJsonDump(data, file_path)
 
 # ------------------------------------------------------------------------------
-# 7.0 DECODE
+# 3.4 DECODE CHARACTERS
 # ------------------------------------------------------------------------------
 
-def decodeCharacters(allFiles):
-    for keyFile in allFiles:
-        with open(keyFile, 'r+') as json_file:
-            data = json.load(json_file)
-
-            json_file.seek(0)
-            json.dump(data, json_file, ensure_ascii=False, indent=4,
-                      sort_keys=True)
-            json_file.truncate()
-
+def decodeCharacters(allFiles: List[str]) -> None:
+    """
+    Decode characters in all localization files.
+    
+    Args:
+        allFiles (List[str]): List of all localization file paths.
+    """
+    for file_path in allFiles:
+        data = safeJsonLoad(file_path)
+        safeJsonDump(data, file_path)
 
 # ------------------------------------------------------------------------------
-# 8.0 UPGRADE
+# 4.0 UPGRADE FUNCTION
 # ------------------------------------------------------------------------------
 
-def upgrade():
-    locales = [
-        'am',
-        'ar',
-        'bg',
-        'bn',
-        'ca',
-        'cs',
-        'da',
-        'de',
-        'el',
-        'en',
-        'es',
-        'et',
-        'fa',
-        'fi',
-        'fil',
-        'fr',
-        'gu',
-        'he',
-        'hi',
-        'hin',
-        'hr',
-        'hu',
-        'id',
-        'it',
-        'ja',
-        'kn',
-        'ko',
-        'lt',
-        'lv',
-        'ml',
-        'mr',
-        'ms',
-        'nb_NO',
-        'nl',
-        'no',
-        'pl',
-        'pt_BR',
-        'pt_PT',
-        'ro',
-        'ru',
-        'sk',
-        'sl',
-        'sr',
-        'sv',
-        'sw',
-        'ta',
-        'te',
-        'th',
-        'tr',
-        'uk',
-        'vi',
-        'zh_CN',
-        'zh_TW'
-    ]
+def upgrade() -> None:
+    """
+    Upgrade localization files, ensuring all languages have all keys.
+    """
+    locales = ['am', 'ar', 'bg', 'bn', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fa', 'fi', 'fil', 'fr', 'gu', 'he', 'hi', 'hin', 'hr', 'hu', 'id', 'it', 'ja', 'kn', 'ko', 'lt', 'lv', 'ml', 'mr', 'ms', 'nb_NO', 'nl', 'no', 'pl', 'pt_BR', 'pt_PT', 'ro', 'ru', 'sk', 'sl', 'sr', 'sv', 'sw', 'ta', 'te', 'th', 'tr', 'uk', 'vi', 'zh_CN', 'zh_TW']
 
-    if os.path.exists('../_locales/en/messages.json'):
-        file = open('../_locales/en/messages.json', 'r+')
-        
-        default_locale = json.load(file)
-
-        file.close()
-    else:
-        default_locale = {}
+    default_locale_path = '../_locales/en/messages.json'
+    default_locale = safeJsonLoad(default_locale_path) if os.path.exists(default_locale_path) else {}
 
     for locale in locales:
-        path = '../_locales/' + locale
+        path = f'../_locales/{locale}'
+        pathlib.Path(path).mkdir(parents=True, exist_ok=True)
+        locale_file_path = f'{path}/messages.json'
 
-        if not os.path.exists(path):
-            pathlib.Path(path).mkdir(parents=True, exist_ok=True)
-
-            file = io.open(path + '/messages.json', mode='w', encoding='utf-8')
-
-            json.dump(default_locale, file, ensure_ascii=False, indent=4, sort_keys=True)
-            
-            file.close()
+        if not os.path.exists(locale_file_path):
+            safeJsonDump(default_locale, locale_file_path)
         else:
-            with open(path + '/messages.json', 'r+') as file:
-                data = json.load(file)
-
-                file.seek(0)
-
-                for key in default_locale:
-                    if (key in data) == False:
-                        data[key] = default_locale[key]
-
-                json.dump(data, file, ensure_ascii=False, indent=4, sort_keys=True)
-                
-                file.truncate()
-
-                file.close()
-
+            data = safeJsonLoad(locale_file_path)
+            data.update({k: v for k, v in default_locale.items() if k not in data})
+            safeJsonDump(data, locale_file_path)
 
 # ------------------------------------------------------------------------------
-# 9.0 INITIALIZATION
+# 5.0 MAIN FUNCTION
 # ------------------------------------------------------------------------------
 
-if not os.path.exists('../_locales/'):
-    pathlib.Path('../_locales/').mkdir(parents=True, exist_ok=True)
+def main() -> None:
+    """
+    Main function to handle command-line arguments and execute corresponding actions.
+    """
+    if not os.path.exists('../_locales/'):
+        pathlib.Path('../_locales/').mkdir(parents=True, exist_ok=True)
 
-allFiles = getListOfFiles('../_locales/')
+    allFiles = getListOfFiles('../_locales/')
 
-for arg in sys.argv:
-    if arg == '-add':
-        addItem(allFiles)
-    elif arg == '-remove':
-        removeItem(allFiles)
-    elif arg == '-decode':
-        decodeCharacters(allFiles)
-    elif arg == '-change-key':
-        changeKey(allFiles)
-    elif arg == '-upgrade':
-        upgrade()
+    actions = {
+        '-add': lambda: addItem(allFiles),
+        '-remove': lambda: removeItem(allFiles),
+        '-decode': lambda: decodeCharacters(allFiles),
+        '-change-key': lambda: changeKey(allFiles),
+        '-upgrade': upgrade
+    }
+
+    for arg in sys.argv[1:]:
+        if arg in actions:
+            actions[arg]()
+
+if __name__ == "__main__":
+    main()
