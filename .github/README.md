@@ -6,9 +6,15 @@
 
 <h3 align="center">Improved & Update HID control prevention</h3>
 
+<h3 align="center">Original Version</h3>
 <p align="center">
-    <a href="https://chrome.google.com/webstore/detail/ctrl-f-freedom-%20-right-cl/ijngdimmjkngoglcjaheoadciaalbafl">Get Started »</a>
+    <a href="https://chrome.google.com/webstore/detail/ctrl-f-freedom-%20-right-cl/ijngdimmjkngoglcjaheoadciaalbafl">Original Extension »</a>
 </p>
+
+
+<h3 align="center">Improved Version</h3>
+<p align="center">
+            <a href="https://github.com/sioaeko/unlock-keyboard-and-mouse.git">Requires manual installation »</a>
 
 ## :earth_americas: Translations
 - [ ] [Arabic](https://github.com/victor-savinov/hid-control-prevention/tree/master/_locales/ar/messages.json) `/ar/`
