@@ -4,7 +4,7 @@
     </a>
 </p>
 
-<h3 align="center">HID control prevention</h3>
+<h3 align="center">Improved & Update HID control prevention</h3>
 
 <p align="center">
     <a href="https://chrome.google.com/webstore/detail/ctrl-f-freedom-%20-right-cl/ijngdimmjkngoglcjaheoadciaalbafl">Get Started »</a>
